@@ -1,0 +1,94 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Department {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String    @db.VarChar(100)
+  code      String    @unique @db.VarChar(20)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  users     User[]
+
+  @@map("departments")
+}
+
+model User {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String        @db.VarChar(100)
+  email        String        @unique @db.VarChar(255)
+  passwordHash String        @map("password_hash")
+  role         Role
+  departmentId String        @map("department_id") @db.Uuid
+  createdAt    DateTime?     @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime?     @default(now()) @map("updated_at") @db.Timestamp(6)
+  department   Department    @relation(fields: [departmentId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_user_department")
+  skills       Skill[]
+  reviews      SkillReview[]
+
+  @@index([departmentId], map: "idx_users_department")
+  @@map("users")
+}
+
+model Skill {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId   String           @map("student_id") @db.Uuid
+  skillName   String           @map("skill_name") @db.VarChar(150)
+  category    String           @db.VarChar(100)
+  proficiency SkillProficiency
+  description String?
+  evidenceUrl String?          @map("evidence_url")
+  status      SkillStatus      @default(PENDING)
+  createdAt   DateTime?        @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime?        @default(now()) @map("updated_at") @db.Timestamp(6)
+  student     User             @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_skill_student")
+  reviews     SkillReview[]
+
+  @@index([status], map: "idx_skills_status")
+  @@index([studentId], map: "idx_skills_student")
+  @@map("skills")
+}
+
+model SkillReview {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  skillId    String      @map("skill_id") @db.Uuid
+  facultyId  String      @map("faculty_id") @db.Uuid
+  status     SkillStatus
+  comments   String?
+  reviewedAt DateTime?   @default(now()) @map("reviewed_at") @db.Timestamp(6)
+  faculty    User        @relation(fields: [facultyId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_review_faculty")
+  skill      Skill       @relation(fields: [skillId], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_review_skill")
+
+  @@index([facultyId], map: "idx_reviews_faculty")
+  @@index([skillId], map: "idx_reviews_skill")
+  @@map("skill_reviews")
+}
+
+enum Role {
+  STUDENT
+  FACULTY
+
+  @@map("user_role")
+}
+
+enum SkillProficiency {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+
+  @@map("proficiency_level")
+}
+
+enum SkillStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("skill_status")
+}
